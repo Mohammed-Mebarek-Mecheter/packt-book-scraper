@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.common.exceptions import WebDriverException, TimeoutException, NoSuchElementException
 import logging
 from contextlib import asynccontextmanager
 
@@ -29,7 +29,6 @@ class BookScraper:
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
 
-        # Hide webdriver property
         driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
             "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
         })
@@ -48,6 +47,7 @@ class BookScraper:
                     driver.get(book_url)
                     await asyncio.sleep(5)
                     book_details = await self._extract_book_details(driver)
+                    book_details['url'] = book_url  # Add URL to book details
                     return book_details
             except WebDriverException as e:
                 self.logger.warning(f"Attempt {attempt + 1} failed for {book_url}: {str(e)}")
@@ -60,23 +60,72 @@ class BookScraper:
         book_details = {}
 
         # Extract Title
-        book_details['title'] = self._safe_get_text(driver, (By.CLASS_NAME, 'product-title'))
+        book_details['title'] = self._safe_get_text(driver, (By.CLASS_NAME, 'product-title')) or "Title not found"
 
         # Extract Author
-        authors = self._safe_get_elements(driver, (By.XPATH, "//div[contains(@class, 'authors desktop')]/span[not(@class)]"))
-        book_details['author'] = ", ".join([author.text.strip() for author in authors]) if authors else "Author not found"
+        authors = self._safe_get_elements(driver, (By.XPATH, "//div[contains(@class, 'authors')]/span[not(@class)]"))
+        if authors:
+            author_names = [author.text.strip() for author in authors]
+            book_details['author'] = ", ".join(filter(None, author_names))
+        else:
+            book_details['author'] = "Author not found"
 
         # Extract Prices
         price_element = self._safe_get_element(driver, (By.CLASS_NAME, 'product-details-price'))
         if price_element:
-            book_details['original_price'] = self._safe_get_text(price_element, (By.TAG_NAME, 'del'))
-            book_details['discounted_price'] = self._safe_get_text(price_element, (By.XPATH, ".//span[contains(@class, 'fw-600')]"))
+            book_details['original_price'] = self._safe_get_text(price_element,
+                                                                 (By.TAG_NAME, 'del')) or "Original price not found"
+            book_details['discounted_price'] = self._safe_get_text(price_element, (
+            By.XPATH, ".//span[contains(@class, 'fw-600')]")) or "Discounted price not found"
         else:
             book_details['original_price'] = book_details['discounted_price'] = "Price not found"
 
-        # Extract Rating and Number of Ratings
-        book_details['rating'] = self._safe_get_text(driver, (By.CLASS_NAME, 'star-rating-total-rating-medium'))
-        book_details['num_ratings'] = self._safe_get_text(driver, (By.CLASS_NAME, 'star-rating-total-count'))
+        # Extract Rating
+        rating_element = self._safe_get_element(driver, (By.CLASS_NAME, 'star-rating-total-rating-medium'))
+        book_details['rating'] = rating_element.text if rating_element else "Rating not found"
+
+        # Extract Number of Ratings
+        num_ratings_element = self._safe_get_element(driver, (By.CLASS_NAME, 'star-rating-total-count'))
+        if num_ratings_element:
+            num_ratings_text = num_ratings_element.text.strip('()')
+            book_details['num_ratings'] = num_ratings_text if num_ratings_text else "0"
+        else:
+            book_details['num_ratings'] = "0"
+
+        # Extract additional details
+        meta_info = self._safe_get_element(driver, (By.CLASS_NAME, 'product-meta.product-details-information'))
+        if meta_info:
+            meta_items = meta_info.find_elements(By.TAG_NAME, 'span')
+            for item in meta_items:
+                text = item.text.strip()
+                if 'pages' in text.lower():
+                    book_details['pages'] = text.split()[0]
+                elif 'edition' in text.lower():
+                    book_details['edition'] = text
+                elif any(month in text for month in
+                         ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']):
+                    book_details['publication_date'] = text
+
+        # Set default values if not found
+        book_details.setdefault('pages', "Pages not specified")
+        book_details.setdefault('edition', "Edition not specified")
+        book_details.setdefault('publication_date', "Publication date not found")
+
+        # Extract Key Benefits
+        key_benefits = self._safe_get_elements(driver, (
+        By.XPATH, "//h2[contains(text(), 'Key benefits')]/following-sibling::ul[1]/li"))
+        book_details['key_benefits'] = [benefit.text for benefit in key_benefits] if key_benefits else [
+            "No key benefits found"]
+
+        # Extract Description
+        book_details['description'] = self._safe_get_text(driver, (
+        By.XPATH, "//h2[contains(text(), 'Description')]/following-sibling::div[1]")) or "Description not found"
+
+        # Extract What You Will Learn
+        what_you_will_learn = self._safe_get_elements(driver, (
+        By.XPATH, "//h2[contains(text(), 'What you will learn')]/following-sibling::ul[1]/li"))
+        book_details['what_you_will_learn'] = [item.text for item in what_you_will_learn] if what_you_will_learn else [
+            "No information found"]
 
         return book_details
 
@@ -96,7 +145,7 @@ class BookScraper:
 
     def _safe_get_text(self, driver, locator, timeout=10):
         element = self._safe_get_element(driver, locator, timeout)
-        return element.text if element else "Not found"
+        return element.text.strip() if element else "Not found"
 
     async def scrape_multiple_books(self, book_urls):
         tasks = [self.scrape_book_details(url) for url in book_urls]

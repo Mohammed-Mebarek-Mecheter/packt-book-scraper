@@ -1,0 +1,117 @@
+/* Updated style.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #ffffff;
+    color: #1e1e1e;
+}
+
+.stApp {
+    background-color: #ffffff;
+}
+
+/* Header Styles */
+.stApp > header {
+    background-color: #ffffff;
+    border-bottom: none;
+}
+
+/* Sidebar Styles */
+.sidebar .sidebar-content {
+    background-color: #f8f9fa;
+    color: #1e1e1e;
+}
+
+.sidebar .stSelectbox {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Main Content Styles */
+.stApp {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1e1e1e;
+}
+
+h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1e1e1e;
+}
+
+.stTextInput > div > div > input {
+    background-color: #ffffff;
+    color: #1e1e1e;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+.stButton > button {
+    background-color: #007bff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.stButton > button:hover {
+    background-color: #0056b3;
+}
+
+/* Progress Bar Styles */
+.stProgress > div > div > div > div {
+    background-color: #007bff;
+}
+
+/* DataFrame Styles */
+.stDataFrame {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.stDataFrame thead {
+    background-color: #f8f9fa;
+    color: #1e1e1e;
+}
+
+.stDataFrame tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+/* Alert Styles */
+.stAlert {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    border-radius: 4px;
+    padding: 1rem;
+}
+
+/* Custom styles for the book icon */
+.book-icon {
+    font-size: 2.5rem;
+    color: #007bff;
+    margin-right: 1rem;
+}
+
+/* Flexbox layout for the header */
+.header-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+}
