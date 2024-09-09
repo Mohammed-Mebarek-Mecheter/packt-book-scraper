@@ -1,0 +1,7 @@
+deta==1.2.0
+fuzzywuzzy==0.18.0
+pandas==2.0.3
+python-dotenv==1.0.1
+selenium==4.24.0
+streamlit==1.38.0
+webdriver_manager==4.0.2
