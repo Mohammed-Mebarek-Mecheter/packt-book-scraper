@@ -1,4 +1,3 @@
-
 # **Packt Book Scraper**
 
 ## **Project Description**
@@ -20,9 +19,11 @@ packt_book_scraper/
 ├── app/
 │   ├── scraper.py        # Scraper logic for extracting book Details
 │   └── utils.py          # Utility functions for data cleaning, validation, etc.
-│
+│   ├── search.py
+│   ├── visualize.py
+│   └── assets/
+│       └── style.css
 ├── data/
-│   ├── scraped_books.json # Exported JSON data
 │   └── logs/             # Directory for storing log files
 │       └── scraper.log   # Log file to capture events and errors
 │

@@ -1,14 +1,14 @@
 # main.py
-import base64
+import pandas as pd
 import streamlit as st
 from st_supabase_connection import SupabaseConnection
 import asyncio
-import pandas as pd
 import logging
 import os
 from app.scraper import BookScraper
+from app.search import search_books_page
+from app.visualize import visualize_data_page
 from app.utils import clean_and_validate_book_data, validate_url
-import plotly.express as px
 from streamlit_lottie import st_lottie
 import json
 
@@ -61,25 +61,27 @@ async def scrape_books(urls, supabase_conn):
                                 # Update existing book
                                 update_response = supabase_conn.table('books').update(cleaned_result).eq('url',
                                                                                                          url).execute()
-                                if update_response.error is None:  # Check for successful update
+
+                                if 'error' in update_response and update_response['error']:
+                                    logging.error(
+                                        f"Failed to update book '{cleaned_result['title']}' in Supabase: {update_response['error']}")
+                                    st.error(
+                                        f"Failed to update book '{cleaned_result['title']}' in Supabase. Error: {update_response['error']}")
+                                else:
                                     logging.info(f"Book '{cleaned_result['title']}' updated in Supabase")
                                     st.info(f"Book '{cleaned_result['title']}' updated in Supabase")
-                                else:
-                                    logging.error(
-                                        f"Failed to update book '{cleaned_result['title']}' in Supabase: {update_response.error}")
-                                    st.error(
-                                        f"Failed to update book '{cleaned_result['title']}' in Supabase. Error: {update_response.error}")
                             else:
                                 # Insert new book
                                 insert_response = supabase_conn.table('books').insert(cleaned_result).execute()
-                                if insert_response.error is None:  # Check for successful insertion
+
+                                if 'error' in insert_response and insert_response['error']:
+                                    logging.error(
+                                        f"Failed to store book '{cleaned_result['title']}' in Supabase: {insert_response['error']}")
+                                    st.error(
+                                        f"Failed to store book '{cleaned_result['title']}' in Supabase. Error: {insert_response['error']}")
+                                else:
                                     logging.info(f"Book '{cleaned_result['title']}' stored in Supabase")
                                     st.success(f"Book '{cleaned_result['title']}' stored in Supabase")
-                                else:
-                                    logging.error(
-                                        f"Failed to store book '{cleaned_result['title']}' in Supabase: {insert_response.error}")
-                                    st.error(
-                                        f"Failed to store book '{cleaned_result['title']}' in Supabase. Error: {insert_response.error}")
                         except Exception as e:
                             logging.error(
                                 f"Failed to store/update book '{cleaned_result['title']}' in Supabase: {str(e)}")
@@ -89,6 +91,26 @@ async def scrape_books(urls, supabase_conn):
             logging.warning(f"Invalid URL: {url}")
     return results
 
+def update_export_files(supabase_conn):
+    try:
+        # Fetch all books from Supabase
+        results = supabase_conn.table('books').select('*').execute()
+        df = pd.DataFrame(results.data)
+
+        # Ensure the data directory exists
+        os.makedirs('data', exist_ok=True)
+
+        # Update CSV file
+        df.to_csv('data/scraped_books.csv', index=False)
+        logging.info("CSV file updated successfully")
+
+        # Update JSON file
+        df.to_json('data/scraped_books.json', orient='records')
+        logging.info("JSON file updated successfully")
+
+    except Exception as e:
+        logging.error(f"Failed to update export files: {str(e)}")
+        st.error(f"Failed to update export files. Error: {str(e)}")
 
 def load_css():
     """Function to load the custom CSS for styling."""
@@ -148,27 +170,19 @@ def sidebar_lottie_animations():
             st.markdown("<a href='https://mebarek.pages.dev/' target='_blank'>Portfolio</a>", unsafe_allow_html=True)
 
 
-def main():
-    st.title("📚 Packt Book Scraper")
-    st.write("Enter Packt book URLs to scrape and manage the data.")
-
-    load_css()
-
-    # Sidebar for navigation
-    page = st.sidebar.selectbox("Choose a page", ["Scrape Books", "Search Books", "Visualize Data"])
-
-    sidebar_lottie_animations()  # Display sidebar Lottie animations
-
-    if page == "Scrape Books":
-        scrape_books_page()
-    elif page == "Search Books":
-        search_books_page()
-    elif page == "Visualize Data":
-        visualize_data_page()
-
-
 def scrape_books_page():
-    st.header("Scrape Books")
+
+    # Packt Publishing link
+    st.markdown(
+        """
+        <a href="https://www.packtpub.com/en-us" target="_blank" class="packt-link">
+            <button style="background-color:#ff642b; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">
+                Visit Packt Publishing
+            </button>
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
 
     # URL Input
     url_input = st.text_area("Enter book URLs (one per line):")
@@ -199,109 +213,31 @@ def scrape_books_page():
         st.success("Scraping completed!")
         status_text.text("Scraping finished.")
 
+def main():
+    load_css()
 
-def search_books_page():
-    st.header("Search Books")
-    search_term = st.text_input("Enter book title, author, or keyword:")
+    # Header with icon and title
+    st.markdown(
+        """
+        <div class="header-container">
+            <span class="book-icon">📚</span>
+            <h1>Packt Book Scraper</h1>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    if supabase_conn:
-        try:
-            if search_term:
-                results = supabase_conn.table('books').select('*').or_(
-                    f"title.ilike.%{search_term}%,author.ilike.%{search_term}%,description.ilike.%{search_term}%"
-                ).execute()
-            else:
-                results = supabase_conn.table('books').select('*').execute()
+    # Sidebar for navigation
+    page = st.sidebar.selectbox("Choose a page", ["Scrape Books", "Search Books", "Visualize Data"])
 
-            matches = results.data if results else []
+    sidebar_lottie_animations()  # Display sidebar Lottie animations
 
-            if matches:
-                st.write(f"Found {len(matches)} matching books:")
-                df = pd.DataFrame(matches)
-
-                # Display using Streamlit's built-in table
-                st.dataframe(
-                    df,
-                    column_config={
-                        "title": st.column_config.TextColumn("Title", width="medium"),
-                        "author": st.column_config.TextColumn("Author", width="medium"),
-                        "original_price": st.column_config.TextColumn("Original Price", width="small"),
-                        "discounted_price": st.column_config.TextColumn("Discounted Price", width="small"),
-                        "rating": st.column_config.NumberColumn("Rating", format="%.1f", width="small"),
-                        "num_ratings": st.column_config.NumberColumn("Number of Ratings", width="small"),
-                        "publication_date": st.column_config.DateColumn("Publication Date", width="medium"),
-                        "pages": st.column_config.NumberColumn("Pages", width="small"),
-                        "edition": st.column_config.TextColumn("Edition", width="small"),
-                    },
-                    hide_index=True,
-                    use_container_width=True
-                )
-
-                # Export options
-                st.subheader("Export Results")
-                export_format = st.selectbox("Select Export Format", ["CSV", "JSON"], key="export_format")
-
-                # Define the export_data function
-                def export_data(df, format):
-                    if format == "CSV":
-                        csv = df.to_csv(index=False)
-                        b64 = base64.b64encode(csv.encode()).decode()
-                        href = f'<a href="data:file/csv;base64,{b64}" download="scraped_books.csv">Download CSV File</a>'
-                        return href
-                    elif format == "JSON":
-                        json = df.to_json(orient='records')
-                        b64 = base64.b64encode(json.encode()).decode()
-                        href = f'<a href="data:file/json;base64,{b64}" download="scraped_books.json">Download JSON File</a>'
-                        return href
-
-                # In the search_books_page function, replace the existing export code with:
-                if st.button("Export"):
-                    if export_format == "CSV":
-                        download_link = export_data(df, "CSV")
-                        st.markdown(download_link, unsafe_allow_html=True)
-                    elif export_format == "JSON":
-                        download_link = export_data(df, "JSON")
-                        st.markdown(download_link, unsafe_allow_html=True)
-            else:
-                st.info("No matches found.")
-        except Exception as e:
-            st.error(f"Error querying the database: {str(e)}")
-    else:
-        st.error("Database connection is not available. Please check your Supabase connection.")
-
-
-def visualize_data_page():
-    st.header("Data Visualization")
-
-    if supabase_conn:
-        try:
-            results = supabase_conn.table('books').select('*').execute()
-            df = pd.DataFrame(results.data)
-
-            if not df.empty:
-                # Price Distribution
-                st.subheader("Price Distribution")
-                fig = px.histogram(df, x="discounted_price", nbins=20, title="Distribution of Book Prices")
-                st.plotly_chart(fig)
-
-                # Top Authors
-                st.subheader("Top Authors")
-                top_authors = df['author'].value_counts().head(10)
-                fig = px.bar(top_authors, x=top_authors.index, y=top_authors.values,
-                             title="Top 10 Authors by Number of Books")
-                st.plotly_chart(fig)
-
-                # Ratings Distribution
-                st.subheader("Ratings Distribution")
-                fig = px.histogram(df, x="rating", nbins=10, title="Distribution of Book Ratings")
-                st.plotly_chart(fig)
-
-            else:
-                st.info("No data available for visualization. Please scrape some books first.")
-        except Exception as e:
-            st.error(f"Error retrieving data for visualization: {str(e)}")
-    else:
-        st.error("Database connection is not available. Please check your Supabase connection.")
+    if page == "Scrape Books":
+        scrape_books_page()
+    elif page == "Search Books":
+        search_books_page(supabase_conn)
+    elif page == "Visualize Data":
+        visualize_data_page(supabase_conn)
 
 if __name__ == "__main__":
     main()

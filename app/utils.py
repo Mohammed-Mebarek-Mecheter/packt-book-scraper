@@ -70,13 +70,16 @@ def validate_book_data(book_data):
 
     return True
 
-import re
-
 def clean_and_validate_book_data(book_data):
     try:
         # Clean the data
         book_data['title'] = clean_text(book_data.get('title', 'Title not found'))
-        book_data['author'] = clean_text(book_data.get('author', 'Author not found'))
+
+        # Clean and format author(s)
+        author = book_data.get('author', 'Author not found')
+        author = author.replace('By,', '').replace(',,', ',').strip()
+        authors = [a.strip() for a in author.split(',') if a.strip()]
+        book_data['author'] = ', '.join(authors)
 
         # Normalize prices
         book_data['original_price'] = normalize_price(book_data.get('original_price', 'N/A'))
@@ -88,15 +91,21 @@ def clean_and_validate_book_data(book_data):
 
         # Convert num_ratings to integer
         num_ratings_str = book_data.get('num_ratings', '0').strip('()')
-        book_data['num_ratings'] = int(re.sub(r'\D', '', num_ratings_str)) if num_ratings_str and num_ratings_str != "0" else 0
+        book_data['num_ratings'] = int(
+            re.sub(r'\D', '', num_ratings_str)) if num_ratings_str and num_ratings_str != "0" else 0
 
         # Convert pages to integer
         pages_str = book_data.get('pages', '0')
-        book_data['pages'] = int(re.sub(r'\D', '', pages_str)) if pages_str and pages_str != "Pages not specified" else None
+        book_data['pages'] = int(
+            re.sub(r'\D', '', pages_str)) if pages_str and pages_str != "Pages not specified" else None
 
         # Ensure key_benefits and what_you_will_learn are lists
-        book_data['key_benefits'] = book_data.get('key_benefits', []) if isinstance(book_data.get('key_benefits'), list) else [book_data.get('key_benefits', 'No key benefits found')]
-        book_data['what_you_will_learn'] = book_data.get('what_you_will_learn', []) if isinstance(book_data.get('what_you_will_learn'), list) else [book_data.get('what_you_will_learn', 'No information found')]
+        book_data['key_benefits'] = book_data.get('key_benefits', []) if isinstance(book_data.get('key_benefits'),
+                                                                                    list) else [
+            book_data.get('key_benefits', 'No key benefits found')]
+        book_data['what_you_will_learn'] = book_data.get('what_you_will_learn', []) if isinstance(
+            book_data.get('what_you_will_learn'), list) else [
+            book_data.get('what_you_will_learn', 'No information found')]
 
         # Validate the data
         validate_book_data(book_data)
