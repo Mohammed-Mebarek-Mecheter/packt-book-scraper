@@ -3,41 +3,41 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
 body {
-    font-family: 'Inter', 'JetBrains Mono Medium', 'sans-serif';
-    background-color: #f9f9f9;
-    color: #333;
+    font-family: 'sans-serif', 'Inter', 'JetBrains Mono Medium';
+    background-color: #0E1117;
+    color: #FAFAFA;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
 .stApp {
-    background-color: #ffffff;
+    background-color: #0E1117;
 }
 
 /* Header Styles */
 .stApp > header {
-    background-color: #ffffff;
+    background-color: #0E1117;
     border-bottom: none;
 }
 
 h1 {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #333;
+    color: #FAFAFA;
 }
 
 .stSubheader {
     font-size: 1.2rem;
     font-weight: 400;
-    color: #666;
+    color: #FAFAFA;
 }
 
 button, input[type="submit"], input[type="button"] {
-    background-color: #ff6f61;
+    background-color: #FF662E;
     color: white;
     font-size: 16px;
-    border: none;
+    border: 1px solid #ddd;
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
@@ -45,7 +45,7 @@ button, input[type="submit"], input[type="button"] {
 }
 
 button:hover, input[type="submit"]:hover, input[type="button"]:hover {
-    background-color: #ff642b;
+    background-color: #FF642B;
     transform: scale(1.05);
 }
 
@@ -58,7 +58,7 @@ button:hover, input[type="submit"]:hover, input[type="button"]:hover {
 
 .stTextInput input:focus {
     outline: none;
-    box-shadow: 0 0 8px rgba(255, 111, 97, 0.8);
+    box-shadow: 0 0 8px rgba(255, 102, 46, 0.8);
 }
 
 .stDataFrame {
@@ -73,7 +73,7 @@ button:hover, input[type="submit"]:hover, input[type="button"]:hover {
 }
 
 .stButton button:hover {
-    background-color: #ff3b2f;
+    background-color: #FF3B2F;
     transform: scale(1.05);
 }
 
@@ -83,7 +83,7 @@ button:hover, input[type="submit"]:hover, input[type="button"]:hover {
 }
 
 .stDataFrame table tr:hover {
-    background-color: rgba(255, 111, 97, 0.1);
+    background-color: rgba(255, 102, 46, 0.1);
     transform: scale(1.01);
 }
 
@@ -109,19 +109,19 @@ button:hover, input[type="submit"]:hover, input[type="button"]:hover {
 
 /* Add hover effects to dataframe column headers */
 .ag-header-cell {
-    color: #ff6f61;
+    color: #FF662E;
     font-weight: bold;
     transition: color 0.3s;
 }
 
 .ag-header-cell:hover {
-    color: #ff3b2f;
+    color: #FF3B2F;
 }
 
 /* Custom styles for the book icon */
 .book-icon {
     font-size: 2.5rem;
-    color: #007bff;
+    color: #FF662E;
     margin-right: 1rem;
 }
 

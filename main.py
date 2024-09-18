@@ -1,7 +1,6 @@
 # main.py
 import pandas as pd
 import streamlit as st
-from st_supabase_connection import SupabaseConnection
 import asyncio
 import logging
 import os
@@ -11,6 +10,12 @@ from app.visualize import visualize_data_page
 from app.utils import clean_and_validate_book_data, validate_url
 from streamlit_lottie import st_lottie
 import json
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Set up logging
 log_dir = "data/logs"
@@ -23,15 +28,36 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# Initialize Supabase connection
+# Database connection parameters
+DB_HOST = os.getenv('DB_HOST')
+DB_NAME = os.getenv('DB_NAME')
+DB_USER = os.getenv('DB_USER')
+DB_PASS = os.getenv('DB_PASS')
+DB_PORT = os.getenv('DB_PORT')
+
+# Initialize PostgreSQL connection
+@st.cache_resource
+def init_db_connection():
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS,
+            port=DB_PORT,
+            sslmode='require'
+        )
+        return conn
+    except Exception as e:
+        st.error(f"Failed to connect to the database: {str(e)}")
+        return None
+
+
+# Set page config
 st.set_page_config(page_title="Packt Book Scraper", page_icon="📚", layout="wide")
 
-# Initialize Supabase connection with error handling
-try:
-    supabase_conn = st.connection('supabase', type=SupabaseConnection)
-except Exception as e:
-    st.error(f"Failed to connect to Supabase: {str(e)}")
-    supabase_conn = None
+# Initialize database connection
+db_conn = init_db_connection()
 
 
 @st.cache_resource
@@ -39,7 +65,7 @@ def init_scraper():
     return BookScraper()
 
 
-async def scrape_books(urls, supabase_conn):
+async def scrape_books(urls, db_conn):
     scraper = BookScraper(headless=True)
     results = []
     for url in urls:
@@ -51,51 +77,73 @@ async def scrape_books(urls, supabase_conn):
                     # Add the URL as a unique identifier
                     cleaned_result['url'] = url
                     results.append(cleaned_result)
-                    # Check if the book already exists in Supabase
-                    if supabase_conn:
+                    # Check if the book already exists in the database
+                    if db_conn:
                         try:
-                            existing_book_response = supabase_conn.table('books').select('*').eq('url', url).execute()
-                            existing_book = existing_book_response.data
+                            with db_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                                cur.execute("SELECT * FROM books WHERE url = %s", (url,))
+                                existing_book = cur.fetchone()
 
-                            if existing_book:
-                                # Update existing book
-                                update_response = supabase_conn.table('books').update(cleaned_result).eq('url',
-                                                                                                         url).execute()
-
-                                if 'error' in update_response and update_response['error']:
-                                    logging.error(
-                                        f"Failed to update book '{cleaned_result['title']}' in Supabase: {update_response['error']}")
-                                    st.error(
-                                        f"Failed to update book '{cleaned_result['title']}' in Supabase. Error: {update_response['error']}")
+                                if existing_book:
+                                    # Update existing book
+                                    update_query = """
+                                    UPDATE books SET 
+                                        title = %s, author = %s, original_price = %s, discounted_price = %s,
+                                        rating = %s, num_ratings = %s, publication_date = %s, pages = %s,
+                                        edition = %s, key_benefits = %s, description = %s, what_you_will_learn = %s
+                                    WHERE url = %s
+                                    """
+                                    cur.execute(update_query, (
+                                        cleaned_result['title'], cleaned_result['author'],
+                                        cleaned_result['original_price'], cleaned_result['discounted_price'],
+                                        cleaned_result['rating'], cleaned_result['num_ratings'],
+                                        cleaned_result['publication_date'], cleaned_result['pages'],
+                                        cleaned_result['edition'], json.dumps(cleaned_result['key_benefits']),
+                                        cleaned_result['description'],
+                                        json.dumps(cleaned_result['what_you_will_learn']),
+                                        url
+                                    ))
+                                    db_conn.commit()
+                                    logging.info(f"Book '{cleaned_result['title']}' updated in the database")
+                                    st.info(f"Book '{cleaned_result['title']}' updated in the database")
                                 else:
-                                    logging.info(f"Book '{cleaned_result['title']}' updated in Supabase")
-                                    st.info(f"Book '{cleaned_result['title']}' updated in Supabase")
-                            else:
-                                # Insert new book
-                                insert_response = supabase_conn.table('books').insert(cleaned_result).execute()
-
-                                if 'error' in insert_response and insert_response['error']:
-                                    logging.error(
-                                        f"Failed to store book '{cleaned_result['title']}' in Supabase: {insert_response['error']}")
-                                    st.error(
-                                        f"Failed to store book '{cleaned_result['title']}' in Supabase. Error: {insert_response['error']}")
-                                else:
-                                    logging.info(f"Book '{cleaned_result['title']}' stored in Supabase")
-                                    st.success(f"Book '{cleaned_result['title']}' stored in Supabase")
+                                    # Insert new book
+                                    insert_query = """
+                                    INSERT INTO books (
+                                        title, author, original_price, discounted_price, rating, num_ratings,
+                                        publication_date, pages, edition, key_benefits, description, what_you_will_learn, url
+                                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    """
+                                    cur.execute(insert_query, (
+                                        cleaned_result['title'], cleaned_result['author'],
+                                        cleaned_result['original_price'], cleaned_result['discounted_price'],
+                                        cleaned_result['rating'], cleaned_result['num_ratings'],
+                                        cleaned_result['publication_date'], cleaned_result['pages'],
+                                        cleaned_result['edition'], json.dumps(cleaned_result['key_benefits']),
+                                        cleaned_result['description'],
+                                        json.dumps(cleaned_result['what_you_will_learn']),
+                                        url
+                                    ))
+                                    db_conn.commit()
+                                    logging.info(f"Book '{cleaned_result['title']}' stored in the database")
+                                    st.success(f"Book '{cleaned_result['title']}' stored in the database")
                         except Exception as e:
                             logging.error(
-                                f"Failed to store/update book '{cleaned_result['title']}' in Supabase: {str(e)}")
+                                f"Failed to store/update book '{cleaned_result['title']}' in the database: {str(e)}")
                             st.error(
-                                f"Failed to store/update book '{cleaned_result['title']}' in Supabase. Error: {str(e)}")
+                                f"Failed to store/update book '{cleaned_result['title']}' in the database. Error: {str(e)}")
         else:
             logging.warning(f"Invalid URL: {url}")
     return results
 
-def update_export_files(supabase_conn):
+
+def update_export_files(db_conn):
     try:
-        # Fetch all books from Supabase
-        results = supabase_conn.table('books').select('*').execute()
-        df = pd.DataFrame(results.data)
+        with db_conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM books")
+            results = cur.fetchall()
+
+        df = pd.DataFrame(results)
 
         # Ensure the data directory exists
         os.makedirs('data', exist_ok=True)
@@ -200,7 +248,7 @@ def scrape_books_page():
 
     if st.button("Scrape Books") and urls:
         with st.spinner('Scraping in progress...'):
-            results = asyncio.run(scrape_books(urls, supabase_conn))
+            results = asyncio.run(scrape_books(urls, db_conn))
             total_urls = len(urls)
 
             for i, result in enumerate(results):
@@ -235,9 +283,9 @@ def main():
     if page == "Scrape Books":
         scrape_books_page()
     elif page == "Search Books":
-        search_books_page(supabase_conn)
+        search_books_page(db_conn)
     elif page == "Visualize Data":
-        visualize_data_page(supabase_conn)
+        visualize_data_page(db_conn)
 
 if __name__ == "__main__":
     main()

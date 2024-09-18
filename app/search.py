@@ -3,24 +3,30 @@ import streamlit as st
 import pandas as pd
 import base64
 import os
+from psycopg2.extras import RealDictCursor
 
-def search_books_page(supabase_conn):
+
+def search_books_page(db_conn):
     search_term = st.text_input("Enter book title, author, or keyword:")
 
-    if supabase_conn:
+    if db_conn:
         try:
-            if search_term:
-                results = supabase_conn.table('books').select(
-                    'title', 'author', 'original_price', 'discounted_price', 'rating', 'num_ratings', 'publication_date', 'pages', 'edition'
-                ).or_(
-                    f"title.ilike.%{search_term}%,author.ilike.%{search_term}%,description.ilike.%{search_term}%"
-                ).execute()
-            else:
-                results = supabase_conn.table('books').select(
-                    'title', 'author', 'original_price', 'discounted_price', 'rating', 'num_ratings', 'publication_date', 'pages', 'edition'
-                ).execute()
+            with db_conn.cursor(cursor_factory=RealDictCursor) as cur:
+                if search_term:
+                    query = """
+                    SELECT title, author, original_price, discounted_price, rating, num_ratings, publication_date, pages, edition
+                    FROM books
+                    WHERE title ILIKE %s OR author ILIKE %s OR description ILIKE %s
+                    """
+                    cur.execute(query, (f"%{search_term}%", f"%{search_term}%", f"%{search_term}%"))
+                else:
+                    query = """
+                    SELECT title, author, original_price, discounted_price, rating, num_ratings, publication_date, pages, edition
+                    FROM books
+                    """
+                    cur.execute(query)
 
-            matches = results.data if results else []
+                matches = cur.fetchall()
 
             if matches:
                 st.write(f"Found {len(matches)} matching books:")
@@ -44,22 +50,18 @@ def search_books_page(supabase_conn):
                     use_container_width=True
                 )
 
-                # Fetch all columns for export
-                all_columns_results = supabase_conn.table('books').select('*').execute()
-                all_columns_df = pd.DataFrame(all_columns_results.data)
-
                 # Export options
                 st.subheader("Export Results")
                 export_format = st.selectbox("Select Export Format", ["CSV", "JSON"], key="export_format")
 
                 if st.button("Export"):
                     if export_format == "CSV":
-                        csv = all_columns_df.to_csv(index=False)
+                        csv = df.to_csv(index=False)
                         b64 = base64.b64encode(csv.encode()).decode()
                         href = f'<a href="data:file/csv;base64,{b64}" download="search_results.csv">Download CSV File</a>'
                         st.markdown(href, unsafe_allow_html=True)
                     elif export_format == "JSON":
-                        json = all_columns_df.to_json(orient='records')
+                        json = df.to_json(orient='records')
                         b64 = base64.b64encode(json.encode()).decode()
                         href = f'<a href="data:file/json;base64,{b64}" download="search_results.json">Download JSON File</a>'
                         st.markdown(href, unsafe_allow_html=True)
@@ -68,5 +70,4 @@ def search_books_page(supabase_conn):
         except Exception as e:
             st.error(f"Error querying the database: {str(e)}")
     else:
-        st.error("Database connection is not available. Please check your Supabase connection.")
-
+        st.error("Database connection is not available. Please check your database connection.")
