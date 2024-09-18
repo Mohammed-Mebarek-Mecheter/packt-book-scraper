@@ -1,4 +1,4 @@
-# **Packt Book Scraper**
+~~# **Packt Book Scraper**
 
 ## **Project Description**
 
@@ -34,46 +34,6 @@ packt_book_scraper/
 └── .gitignore            # Git ignore file to exclude unnecessary files from version control
 ```
 
-## **Setup Instructions**
-
-### **1. Prerequisites**
-- Python 3.11+
-- A SupaBase account and project key ([sign up here](https://supabase.com/))
-
-### **2. Clone the Repository**
-
-```bash
-git clone https://github.com/Mohammed-Mebarek-Mecheter/packt_book_scraper.git
-cd packt_book_scraper
-```
-
-### **3. Create a Virtual Environment**
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-```
-
-### **4. Install Required Packages**
-
-```bash
-pip install -r requirements.txt
-```
-
-### **5. Set Up Environment Variables**
-
-Create a `.env` file in the root of the project and add your SupaBase Project Key:
-
-```
-SupaBase_PROJECT_KEY=your_SupaBase_project_key_here
-```
-
-### **6. Run the Application**
-
-```bash
-streamlit run app/main.py
-```
-
 ## **Usage Guide**
 
 ### **1. Scrape Book Data**
@@ -91,41 +51,3 @@ streamlit run app/main.py
 ### **3. Export Data**
 
 - **Export Results**: Export the search results or all books in the database to CSV or JSON format using the export options.
-
-## **Contributing Guidelines**
-
-### **1. Fork the Repository**
-
-If you'd like to contribute, start by forking the repository on GitHub:
-
-- Click the "Fork" button at the top right of the repository page.
-
-### **2. Create a Feature Branch**
-
-Create a new branch for your feature or bug fix:
-
-```bash
-git checkout -b feature-name
-```
-
-### **3. Make Your Changes**
-
-Add your changes to the branch. Ensure that your code adheres to the project's coding standards.
-
-### **4. Test Your Changes**
-
-Run tests to ensure your changes don't break existing functionality. You can use the provided test scripts in the `tests/` directory.
-
-### **5. Commit and Push Your Changes**
-
-Commit your changes with a meaningful commit message:
-
-```bash
-git commit -m "Add feature XYZ"
-git push origin feature-name
-```
-
-### **6. Submit a Pull Request**
-
-Go to the original repository on GitHub and submit a pull request from your forked repository. Be sure to provide a SupaBaseiled description of the changes and the problem you're solving.
-
