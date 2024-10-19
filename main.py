@@ -180,7 +180,7 @@ def load_lottie_file(filepath: str):
         return None
 
 
-def sidebar_lottie_animations():
+def footer_lottie_animations():
     """Load and display Lottie animations for GitHub, LinkedIn, and Portfolio in the sidebar."""
     # Paths to Lottie JSON files
     lottie_github_path = "app/assets/images/github.json"
@@ -193,30 +193,23 @@ def sidebar_lottie_animations():
     lottie_portfolio = load_lottie_file(lottie_portfolio_path)
 
     # Sidebar Lottie Animations with Links
-    with st.sidebar:
-        st.markdown("### Connect with me")
+    with st.expander("Contact Information"):
+        col1, col2, col3 = st.columns(3)
 
-        # GitHub
-        col1, col2 = st.columns([1, 3])
         with col1:
-            st_lottie(lottie_github, height=30, width=30, key="lottie_github_sidebar")
-        with col2:
-            st.markdown("<a href='https://github.com/Mohammed-Mebarek-Mecheter/' target='_blank'>GitHub</a>", unsafe_allow_html=True)
+            lottie_github = load_lottie_file("app/assets/images/github.json")
+            st_lottie(lottie_github, height=50, key="github")
+            st.markdown("[GitHub](https://github.com/Mohammed-Mebarek-Mecheter/)")
 
-        # LinkedIn
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            st_lottie(lottie_linkedin, height=30, width=30, key="lottie_linkedin_sidebar")
         with col2:
-            st.markdown("<a href='https://www.linkedin.com/in/mohammed-mecheter/' target='_blank'>LinkedIn</a>", unsafe_allow_html=True)
+            lottie_linkedin = load_lottie_file("app/assets/images/linkedin.json")
+            st_lottie(lottie_linkedin, height=50, key="linkedin")
+            st.markdown("[LinkedIn](https://www.linkedin.com/in/mohammed-mecheter/)")
 
-        # Portfolio
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            st_lottie(lottie_portfolio, height=30, width=30, key="lottie_portfolio_sidebar")
-        with col2:
-            st.markdown("<a href='https://mebarek.pages.dev/' target='_blank'>Portfolio</a>", unsafe_allow_html=True)
-
+        with col3:
+            lottie_portfolio = load_lottie_file("app/assets/images/profile.json")
+            st_lottie(lottie_portfolio, height=50, key="portfolio")
+            st.markdown("[Portfolio](https://mebarek.pages.dev/)")
 
 def scrape_books_page():
 
@@ -276,9 +269,7 @@ def main():
     )
 
     # Sidebar for navigation
-    page = st.sidebar.selectbox("Choose a page", ["Scrape Books", "Search Books", "Visualize Data"])
-
-    sidebar_lottie_animations()  # Display sidebar Lottie animations
+    page = st.selectbox("Choose a page", ["Scrape Books", "Search Books", "Visualize Data"])
 
     if page == "Scrape Books":
         scrape_books_page()
@@ -286,6 +277,9 @@ def main():
         search_books_page(db_conn)
     elif page == "Visualize Data":
         visualize_data_page(db_conn)
+
+    # Call the footer animations at the end
+    footer_lottie_animations()
 
 if __name__ == "__main__":
     main()

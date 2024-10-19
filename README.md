@@ -1,4 +1,4 @@
-~~# **Packt Book Scraper**
+# **Packt Book Scraper**
 
 ## **Project Description**
 
@@ -10,6 +10,8 @@ Packt Book Scraper is a web application built with Streamlit that allows users t
 - **Interactive Data Display**: Uses AG Grid to display the scraped books in a sortable, filterable, and paginated table.
 - **Search Functionality**: Allows users to search for books by title, author, or keywords.
 - **Data Export**: Users can export the search results or all stored books to CSV or JSON files.
+
+You can access the project on [the Streamlit Cloud](https://packt-book-scraper.streamlit.app/)
 
 ## **Project Structure**
 
